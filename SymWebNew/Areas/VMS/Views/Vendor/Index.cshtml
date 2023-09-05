@@ -1,0 +1,272 @@
+﻿@model VATViewModel.DTOs.VendorVM
+@using UIHelper.MVC
+@using VATServer.Ordinary
+
+<div class="headrow">
+    <div style="display: none" id="formAppend"></div>
+    <button type="button" title="Add New Vendor" data-url="/VMS/Vendor/Create" onclick="GoTo(this)" id=""  class=" sym-btn-add ">&nbsp;New</button>
+    <button type="button" title="View Report" class=" sym-btn-report printBtn">&nbsp;Print</button>
+    @*<button type="button" title="Delete Vendor" data-url="/VMS/Vendor/Delete" onclick="deletedData(this, 'myDataTable');" id="" class="sym-btn-remove">&nbsp;Delete</button>*@
+    @if (OrdinaryVATDesktop.IsACICompany(Convert.ToString(Session["CompanyCode"])))
+{
+    @*<button type="button" title="Sync Customer" data-url="/VMS/Vendor/SyncVendor" onclick="GoTo(this)" class=" sym-btn-refresh">&nbsp;Sync</button>*@
+}
+    <label class="pull-right">Vendor</label>
+</div>
+<div class="thinbox animated slideInDown faster" id="vendorIndex">
+    <div class="th_thinbox">
+        <p>Vendor List</p>
+    </div>
+    <div class="dtSearch formDesign">
+        <div class="row">
+            <div class="col-md-2">
+                <label>Search Field</label>
+                @Html.SimpleDropDown("SearchField", "/Config/DropDown/VendorColumnSearch", new { @class = " form-control " })
+            </div>
+            <div class="col-md-2">
+                <label>Search Value</label>
+                @Html.TextBox("SearchValue", "", new { @class = " form-control" })
+            </div>
+            <div class="col-md-2">
+                <div class="editor-label">
+                    @Html.Label("Vendor Group")
+                </div>
+                <div class="editor-field">
+                    @Html.SimpleDropDownFor(model => model.VendorGroupID, "/Config/DropDown/VendorGroup", new { @class = " form-control selectDropdown" })
+                </div>
+            </div>
+            <div class="trk1_5">
+                <div class="editor-label">
+                    @Html.Label("Start Date From")
+                </div>
+                <div class="editor-field">
+                    @Html.TextBoxFor(model => model.StartDateFrom, new { @placeholder = "Start Date From", @class = "customDatePicker  form-control" })
+                </div>
+            </div>
+            <div class="trk1_5">
+                <div class="editor-label">
+                    @Html.Label("Start Date To")
+                </div>
+                <div class="editor-field">
+                    @Html.TextBoxFor(model => model.StartDateTo, new { @placeholder = "Start Date To", @class = "customDatePicker  form-control" })
+                </div>
+            </div>
+            <div class="col-md-1">
+                <div class="editor-label">
+                    @Html.Label("Active Status")
+                </div>
+                <div class="editor-field">
+                    <select id="IsActive" class="form-control">
+                        <option value=""></option>
+                        <option value="Y">Y</option>
+                        <option value="N">N</option>
+                    </select>
+                </div>
+
+               
+
+
+            </div>
+        </div>
+            <div class="row">
+            
+                <div class="col-md-1">
+                    <div class="editor-label">
+                        <label>Select Top</label>
+                    </div>
+                    <div class="editor-field">
+                        @Html.SimpleDropDownFor(model => model.SelectTop, "/Config/DropDown/RecordSelectList", new { @class = " cSelectTop form-control" })
+                    </div>
+                </div>
+                
+                <div class="col-md-2">
+                <div class="editor-label">
+                    <label>&nbsp;</label>
+                </div>
+                <div class="editor-field">
+                    <button type="button" title="Click to Search" id="btnDialog" class="sym-btn-search">&nbsp;Search</button>
+                    <button type="button" title="Clear Data" id="Clear" class=" sym-btn-clear">&nbsp;Clear</button>
+                </div>
+            </div>
+       
+        
+
+            <div class="col-md-1">
+                <div class="editor-label">
+                    <label>Export All</label>
+                </div>
+                <div class="editor-field">
+                    @Html.CheckBox("ExportAll", new { id = "idExportAll", @class = "cExportAll form-control", @name = "att[]" })
+                </div>
+            </div>
+
+            <div class="col-md-1">
+                <div class="editor-label">
+                    &nbsp;
+                </div>
+                <div class="editor-field">
+                    <button type="button" title="Export Data" onclick="ExportExcel()" class="sym-btn-Excel-Export">&nbsp;Export</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <p>&nbsp;</p>
+    <table id="myDataTable" class="display">
+        <thead>
+            <tr>
+                <th class="center">
+                    <input type="checkbox" class="chkAll" />Select All
+                </th>
+                <th>Vendor Code</th>
+                <th>Vendor Name</th>
+                <th>Address 1 </th>
+                <th>Telephone No</th>
+                <th>Email</th>
+                <th>VDS Percent</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <br />
+</div>
+<div class="headrow">
+        <button type="button" title="Add New Vendor" data-url="/VMS/Vendor/Create" onclick="GoTo(this)" id="" class=" sym-btn-add ">&nbsp;New</button>
+        <button type="button" title="View Report" class=" sym-btn-report printBtn">&nbsp;Print</button>
+        @*<button type="button" title="Delete Vendor" data-url="/VMS/Vendor/Delete" onclick="deletedData(this, 'myDataTable');" id="" class="sym-btn-remove">&nbsp;Delete</button>*@
+</div>
+<div id="myModal" class="trkmodal"></div>
+
+<script language="javascript" type="text/javascript">
+    $(document).ready(function () {
+        SelectAllForDelete();
+        $.datepicker.regional[""].dateFormat = 'dd/M/y';
+        $.datepicker.setDefaults($.datepicker.regional['']);
+
+        function modalInit() {
+            var modal = document.getElementById('myModal');
+            $('.printBtn').click(function () {
+                var url = "/Vms/Vendor/PrintVendor";
+                $.ajax({
+                    url: url,
+                    cache: false,
+                    beforeSend: function () { $(".loading").show(); },
+                    complete: function () { $(".loading").fadeOut(200).hide("slow") },
+                    success: function (html) {
+                        modal.style.display = "block";
+                        $("#myModal").html(html);
+                    }
+                });
+            });
+        }
+        modalInit();
+
+        var oTable = $('#myDataTable').dataTable({
+            "bServerSide": true,
+            "sAjaxSource": "/VMS/Vendor/_index",
+            "bProcessing": true,
+            "aLengthMenu": tablelength(),
+            "bJqueryUI": true,
+            "bAutoWidth": false,
+
+            "fnServerData": function (sSource, aoData, fnCallback) {
+                $('.dtSearch :input').each(function () {
+                    var Name = $(this).attr("Id")
+                    var Value = $(this).val()
+                    aoData.push({ "name": Name, "value": Value });
+                });
+                $.getJSON(sSource, aoData, function (json) {
+                    fnCallback(json);
+                });
+            },
+
+            "aoColumns": [
+                            {
+                                "sName": "Id",
+                                "bSearchable": false,
+                                "bSortable": false,
+                                "sWidth": "8%",
+                                "sClass": "center",
+                                "fnRender": function (oObj) {
+                                    console.log(oObj);
+                                    return ' <input onclick="CheckAll(this)" type="checkbox" data-Id="' + oObj.aData[1] + '"class="dSelected">'
+                                        + '&nbsp; <a id=""  title="Click on for Edit"  style="text-decoration:none;"   href=\"/VMS/Vendor/Edit/' + oObj.aData[0] + '\" class=" innerListLink sym-btn-edit-row"></a>'
+                                    //// + '&nbsp; <a title="Click on for Delete"  data-url="/VMS/Vendor/Delete" onclick="deletedData(this, myDataTable,\'' + oObj.aData[0] + '\');"  class="sym-btn-remove-row"></a>'
+                                    ;
+                                }
+                                //"sName": "Id", "sWidth": "12%"
+                            }
+                            , { "sName": "VendorCode", "sWidth": "5%" }
+                            , { "sName": "VendorName", "sWidth": "12%" }
+                            , { "sName": "Address1", "sWidth": "10%" }
+                            , { "sName": "TelephoneNo", "sWidth": "8%" }
+                            , { "sName": "Email", "sWidth": "8%" }
+                            , { "sName": "VDSPercent", "sWidth": "5%" }
+              
+
+            ]
+        });
+        $('#btnDialog').click(function () {
+            var model = $('.dtSearch :input').serialize();
+            $.ajax({
+                url: "/VMS/Vendor/Index",
+                cache: false,
+                data: model,
+                success: function (html) {
+                    oTable.fnDraw();
+                }
+            });
+        });
+        ////clearing fields
+        $("#Clear").on('click', function () {
+            $(".Dropdown").select2("val", "");
+            $(".form-control").val("");
+        });
+    });
+
+
+
+
+    function ExportExcel() {
+        var questionMSG = "Are you sure to Export Excel!";
+
+        Ask(questionMSG, function () {
+            var ExportAll = $('#idExportAll').is(":checked");
+            console.log("TEST EXPORT");
+            // console.log(ExportAll);
+
+            var IDs = [];
+            var $Items = $("#vendorIndex  .dSelected:input:checkbox:checked");
+            if (!ExportAll) {
+                if ($Items == null || $Items.length == 0) {
+                    ShowResult("Fail", "You are requested to Select before Export!");
+                    return;
+                }
+            }
+
+
+            $Items.each(function () {
+
+                var ID = $(this).attr("data-Id");
+                IDs.push(ID);
+            });
+
+            var model = {
+                IDs: IDs,
+
+            }
+
+            var url = '/VMS/Vendor/ExportExcell';
+            var form = $('<form action="' + url + '"></form>');
+
+            IDs.forEach(function (item) {
+                form.append($('<input  value="' + item + '" name="VendorIDs" />'))
+            })
+            form.append($('<input  value="' + ExportAll + '" name="ExportAll" />'))
+            form.appendTo('#formAppend').submit()
+        });
+
+    }
+
+
+</script>
